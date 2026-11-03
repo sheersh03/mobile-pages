@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Emergency Repair</title>
+<style>
+  :root { --brand: #d9480f; --ink: #111; --card: #f5f5f4; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--ink); background: #fff; padding-bottom: 88px; }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  header { background: var(--brand); color: #fff; padding: 28px 16px 32px; }
+  .biz { font-weight: 700; opacity: .9; margin: 0 0 8px; }
+  h1 { font-size: 1.9rem; line-height: 1.15; margin: 0 0 12px; }
+  .sub { margin: 0; }
+  .trust { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .badge { background: rgba(255,255,255,.2); border-radius: 999px; padding: 4px 12px; font-size: .9rem; font-weight: 600; }
+  section { padding: 24px 16px; }
+  .card { background: var(--card); border-radius: 12px; padding: 20px; }
+  h2 { font-size: 1.25rem; margin: 0 0 8px; }
+  label { display: block; font-weight: 600; margin: 12px 0 4px; }
+  input, textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font: inherit; }
+  .btn { display: block; width: 100%; border: 0; border-radius: 10px; padding: 16px; margin-top: 16px; background: var(--brand); color: #fff; font: inherit; font-weight: 700; font-size: 1.1rem; text-align: center; text-decoration: none; cursor: pointer; }
+  .ok { font-weight: 600; color: #2b8a3e; }
+  ul { padding-left: 20px; margin: 0; }
+  .callbar { position: fixed; left: 0; right: 0; bottom: 0; padding: 0 16px 12px; background: #fff; box-shadow: 0 -2px 12px rgba(0,0,0,.15); }
+  .callbar .btn { max-width: 640px; margin: 12px auto 0; }
+
+  #toolbar { position: fixed; top: 12px; right: 12px; z-index: 10; width: 280px; max-width: calc(100vw - 24px); max-height: calc(100vh - 120px); overflow: auto; background: #111; color: #fff; border-radius: 12px; padding: 14px; font-size: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.3); }
+  #toolbar label { margin: 8px 0 2px; font-weight: 500; }
+  #toolbar input { padding: 6px 8px; }
+  #toolbar .row { display: flex; gap: 8px; margin-top: 12px; }
+  #toolbar button { flex: 1; padding: 8px; border: 0; border-radius: 8px; font: inherit; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <p class="biz" data-f="name"></p>
+    <h1>Emergency <span data-f="service"></span> Repair in <span data-f="city"></span></h1>
+    <p class="sub">Fast local response. Call now and talk to a real technician, not a call center.</p>
+    <div class="trust">
+      <span class="badge">★ <span data-f="rating"></span> from <span data-f="reviews"></span>+ local homeowners</span>
+      <span class="badge">Licensed &amp; Insured</span>
+      <span class="badge">24/7 Emergency Service</span>
+    </div>
+  </div>
+</header>
+
+<section class="wrap">
+  <div class="card">
+    <h2>Request a technician</h2>
+    <form id="lead">
+      <label for="f-name">Name</label>
+      <input id="f-name" name="name" autocomplete="name" required>
+      <label for="f-phone">Phone number</label>
+      <input id="f-phone" name="phone" type="tel" autocomplete="tel" required>
+      <label for="f-issue">Emergency issue</label>
+      <textarea id="f-issue" name="issue" rows="3" required></textarea>
+      <input type="text" name="_honey" tabindex="-1" autocomplete="off" style="display:none">
+      <button class="btn" type="submit">Send request</button>
+    </form>
+    <p class="ok" id="ok" role="status" hidden>Got it. We'll call you back within minutes.</p>
+    <p id="err" role="alert" hidden>Couldn't send your request. Please tap the call button below.</p>
+  </div>
+</section>
+
+<section class="wrap">
+  <h2>Why <span data-f="city"></span> homeowners call us</h2>
+  <ul>
+    <li>Same-day emergency visits</li>
+    <li>Upfront pricing before any work starts</li>
+    <li>Local crew, not a national call center</li>
+  </ul>
+</section>
+
+<div class="callbar"><a class="btn" id="call">📞 Tap to Call <span data-f="phone"></span></a></div>
+
+<div id="toolbar" hidden>
+  <strong>Customize</strong>
+  <label>Business name <input data-k="name"></label>
+  <label>Service <input data-k="service" list="services"></label>
+  <datalist id="services"><option value="Roof"><option value="HVAC"><option value="AC"><option value="Plumbing"></datalist>
+  <label>City <input data-k="city"></label>
+  <label>Phone <input data-k="phone" type="tel"></label>
+  <label>Google rating <input data-k="rating"></label>
+  <label>Review count <input data-k="reviews"></label>
+  <label>Brand color <input data-k="color" type="color"></label>
+  <div class="row">
+    <button type="button" id="copy">Copy preview link</button>
+    <button type="button" id="hide">Hide</button>
+  </div>
+</div>
+
+<script>
+  const DEFAULTS = { name: "Your Business Name", service: "Roof", city: "Miami", phone: "(305) 555-0100", rating: "4.9", reviews: "120", color: "#d9480f" };
+  const params = new URLSearchParams(location.search);
+  const state = Object.fromEntries(Object.keys(DEFAULTS).map(k => [k, params.get(k) || DEFAULTS[k]]));
+
+  function render() {
+    // textContent only: URL params are untrusted, never inject them as HTML.
+    document.querySelectorAll("[data-f]").forEach(el => { el.textContent = state[el.dataset.f]; });
+    if (/^#[0-9a-f]{6}$/i.test(state.color)) document.documentElement.style.setProperty("--brand", state.color);
+    document.getElementById("call").href = "tel:" + state.phone.replace(/[^\d+]/g, "");
+    document.title = `Emergency ${state.service} Repair in ${state.city} | ${state.name}`;
+  }
+
+  function previewLink() {
+    const url = new URL(location.href);
+    url.search = new URLSearchParams(state).toString();
+    return url.toString();
+  }
+
+  const toolbar = document.getElementById("toolbar");
+  toolbar.hidden = !params.has("edit");
+  toolbar.querySelectorAll("[data-k]").forEach(input => {
+    input.value = state[input.dataset.k];
+    input.addEventListener("input", () => { state[input.dataset.k] = input.value; render(); });
+  });
+  document.getElementById("hide").onclick = () => { toolbar.hidden = true; };
+  document.getElementById("copy").onclick = async (e) => {
+    const link = previewLink();
+    try { await navigator.clipboard.writeText(link); e.target.textContent = "Copied!"; }
+    catch { prompt("Copy this link:", link); }
+  };
+
+  // Leads are emailed through FormSubmit (no signup). The first submission sends an
+  // activation email to this address; click it once, then leads arrive normally.
+  const LEAD_EMAIL = "notifysheersh@gmail.com";
+
+  document.getElementById("lead").addEventListener("submit", async e => {
+    e.preventDefault();
+    const form = e.target;
+    const button = form.querySelector("button");
+    const data = Object.fromEntries(new FormData(form));
+    button.disabled = true;
+    button.textContent = "Sending…";
+    try {
+      const res = await fetch(`https://formsubmit.co/ajax/${LEAD_EMAIL}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          ...data,
+          business: state.name,
+          city: state.city,
+          _subject: `New lead: ${state.name} (${state.city})`,
+          _template: "table",
+        }),
+      });
+      if (!res.ok) throw new Error(`FormSubmit returned ${res.status}`);
+      form.hidden = true;
+      document.getElementById("ok").hidden = false;
+    } catch (err) {
+      console.error("Lead submit failed:", err);
+      button.disabled = false;
+      button.textContent = "Send request";
+      document.getElementById("err").hidden = false;
+    }
+  });
+
+  render();
+</script>
+</body>
+</html>
