@@ -96,11 +96,13 @@
 <script>
   const DEFAULTS = { name: "Your Business Name", service: "Roof", city: "Miami", phone: "(305) 555-0100", rating: "4.9", reviews: "120", color: "#d9480f" };
   const params = new URLSearchParams(location.search);
-  const state = Object.fromEntries(Object.keys(DEFAULTS).map(k => [k, params.get(k) || DEFAULTS[k]]));
+  const hasQuery = params.size > 0;
+  const state = Object.fromEntries(Object.keys(DEFAULTS).map(k => [k, hasQuery && (k === "rating" || k === "reviews") ? (params.get(k) || "") : (params.get(k) || DEFAULTS[k])]));
 
   function render() {
     // textContent only: URL params are untrusted, never inject them as HTML.
     document.querySelectorAll("[data-f]").forEach(el => { el.textContent = state[el.dataset.f]; });
+    document.querySelector("[data-f=rating]").closest(".badge").hidden = hasQuery && (!state.rating || !state.reviews);
     if (/^#[0-9a-f]{6}$/i.test(state.color)) document.documentElement.style.setProperty("--brand", state.color);
     document.getElementById("call").href = "tel:" + state.phone.replace(/[^\d+]/g, "");
     document.title = `Emergency ${state.service} Repair in ${state.city} | ${state.name}`;
